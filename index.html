@@ -1,22 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Auto Store Scanner</title>
+  <title>Smart Store Scanner</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     body { font-family: Arial; text-align: center; margin:0; padding:10px; background:#f5f5f5; }
     h1 { margin-bottom:10px; }
     #reader { width:100%; max-width:350px; margin:auto; }
-    #cart { list-style:none; padding:0; }
-    li { background:white; margin:5px; padding:10px; border-radius:8px; }
-    input { padding:10px; margin:5px; width:80%; max-width:250px; }
-    button { padding:10px 15px; margin:5px; border:none; border-radius:8px; background:black; color:white; }
+    #cart { list-style:none; padding:0; margin:0 auto; max-width:350px; }
+    li { background:white; margin:5px; padding:10px; border-radius:8px; display:flex; justify-content: space-between; align-items:center; }
+    button { padding:5px 10px; margin:0 2px; border:none; border-radius:6px; background:black; color:white; cursor:pointer; }
+    .qty { margin: 0 5px; }
   </style>
 </head>
 <body>
 
-<h1>📱 Auto Store</h1>
+<h1>📱 Smart Store</h1>
 <div id="reader"></div>
 <h2 id="result">Scan a product</h2>
 
@@ -31,67 +31,98 @@ let products = {
   "1002": { name: "Soda", price: 1.50 }
 };
 
-let total = 0;
+let cart = {}; // store cart items by code
 
-function addToCart(code, name, price) {
-  let li = document.createElement("li");
-  li.innerText = name + " - $" + price.toFixed(2);
-  document.getElementById("cart").appendChild(li);
+function updateCartUI() {
+  let cartUl = document.getElementById("cart");
+  cartUl.innerHTML = "";
+  let total = 0;
 
-  total += price;
+  for (let code in cart) {
+    let item = cart[code];
+    total += item.price * item.qty;
+
+    let li = document.createElement("li");
+
+    li.innerHTML = `
+      <span>${item.name} - $${item.price.toFixed(2)}</span>
+      <div>
+        <button onclick="changeQty('${code}', -1)">-</button>
+        <span class="qty">${item.qty}</span>
+        <button onclick="changeQty('${code}', 1)">+</button>
+        <button onclick="removeItem('${code}')">❌</button>
+      </div>
+    `;
+
+    cartUl.appendChild(li);
+  }
+
   document.getElementById("total").innerText = "Total: $" + total.toFixed(2);
-  document.getElementById("result").innerText = "✅ Added: " + name;
+}
+
+function changeQty(code, delta) {
+  if (cart[code]) {
+    cart[code].qty += delta;
+    if (cart[code].qty <= 0) {
+      delete cart[code];
+    }
+    updateCartUI();
+  }
+}
+
+function removeItem(code) {
+  delete cart[code];
+  updateCartUI();
+}
+
+function clearCart() {
+  cart = {};
+  updateCartUI();
 }
 
 function onScanSuccess(code) {
   let product = products[code];
 
-  if (product) {
-    addToCart(code, product.name, product.price);
-  } else {
-    // Product not found → prompt user to add it automatically
+  if (!product) {
+    // Prompt for new product
     let name = prompt("New product! Enter name for code: " + code);
     let price = parseFloat(prompt("Enter price for " + name));
-
     if (name && !isNaN(price)) {
       products[code] = { name: name, price: price };
-      addToCart(code, name, price);
-      alert("✅ Product saved to system!");
+      product = products[code];
+      alert("✅ Product saved!");
     } else {
-      alert("❌ Invalid input, product not added.");
+      alert("❌ Invalid input. Product not added.");
+      return;
     }
   }
-}
 
-function clearCart() {
-  document.getElementById("cart").innerHTML = "";
-  total = 0;
-  document.getElementById("total").innerText = "Total: $0.00";
+  // Add to cart
+  if (cart[code]) {
+    cart[code].qty += 1;
+  } else {
+    cart[code] = { name: product.name, price: product.price, qty: 1 };
+  }
+
+  updateCartUI();
+  document.getElementById("result").innerText = "✅ Added: " + product.name;
 }
 
 // Initialize scanner
 let scanner = new Html5Qrcode("reader");
 Html5Qrcode.getCameras().then(devices => {
-  let backCamera = devices.find(device =>
-    device.label.toLowerCase().includes("back") ||
-    device.label.toLowerCase().includes("rear")
+  let backCamera = devices.find(d =>
+    d.label.toLowerCase().includes("back") ||
+    d.label.toLowerCase().includes("rear")
   );
-
   let cameraId = backCamera ? backCamera.id : devices[0].id;
 
-  scanner.start(
-    cameraId,
-    { fps: 10, qrbox: 250 },
-    onScanSuccess
-  );
+  scanner.start(cameraId, { fps: 10, qrbox: 250 }, onScanSuccess);
 }).catch(err => {
   // fallback
-  scanner.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: 250 },
-    onScanSuccess
-  );
+  scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, onScanSuccess);
 });
 </script>
+
 </body>
 </html>
