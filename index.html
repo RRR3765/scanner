@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Store Scanner</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { font-family: Arial; text-align: center; }
+    #cart { margin-top: 20px; }
+    button { padding: 10px; margin: 5px; }
+  </style>
+</head>
+
+<body>
+
+<h1>📱 My Store</h1>
+
+<div id="reader" style="width:300px; margin:auto;"></div>
+
+<h2 id="result">Scan a product</h2>
+
+<h3>🛒 Cart</h3>
+<ul id="cart"></ul>
+<h2 id="total">Total: $0.00</h2>
+
+<button onclick="clearCart()">Clear Cart</button>
+
+<hr>
+
+<h3>➕ Add Product</h3>
+<input id="code" placeholder="Code (ex: 1001)">
+<input id="name" placeholder="Name">
+<input id="price" placeholder="Price">
+<br>
+<button onclick="addProduct()">Add Product</button>
+
+<script>
+  let products = {
+    "1001": { name: "Chips", price: 2.00 },
+    "1002": { name: "Soda", price: 1.50 }
+  };
+
+  let total = 0;
+
+  function onScanSuccess(code) {
+    let product = products[code];
+
+    if (product) {
+      let li = document.createElement("li");
+      li.innerText = product.name + " - $" + product.price.toFixed(2);
+      document.getElementById("cart").appendChild(li);
+
+      total += product.price;
+      document.getElementById("total").innerText =
+        "Total: $" + total.toFixed(2);
+
+      document.getElementById("result").innerText =
+        "Added: " + product.name;
+    } else {
+      document.getElementById("result").innerText =
+        "❌ Product not found";
+    }
+  }
+
+  function clearCart() {
+    document.getElementById("cart").innerHTML = "";
+    total = 0;
+    document.getElementById("total").innerText = "Total: $0.00";
+  }
+
+  function addProduct() {
+    let code = document.getElementById("code").value;
+    let name = document.getElementById("name").value;
+    let price = parseFloat(document.getElementById("price").value);
+
+    if (code && name && price) {
+      products[code] = { name: name, price: price };
+      alert("✅ Product added!");
+    } else {
+      alert("Fill all fields");
+    }
+  }
+
+  let scanner = new Html5Qrcode("reader");
+  Html5Qrcode.getCameras().then(devices => {
+    scanner.start(
+      devices[0].id,
+      { fps: 10, qrbox: 250 },
+      onScanSuccess
+    );
+  });
+</script>
+
+</body>
+</html>
