@@ -1,161 +1,97 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>My Store Scanner</title>
-
-  <!-- Mobile friendly -->
+  <title>Auto Store Scanner</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <script src="https://unpkg.com/html5-qrcode"></script>
-
   <style>
-    body {
-      font-family: Arial;
-      text-align: center;
-      margin: 0;
-      padding: 10px;
-      background: #f5f5f5;
-    }
-
-    h1 {
-      margin-bottom: 10px;
-    }
-
-    #reader {
-      width: 100%;
-      max-width: 350px;
-      margin: auto;
-    }
-
-    #cart {
-      list-style: none;
-      padding: 0;
-    }
-
-    li {
-      background: white;
-      margin: 5px;
-      padding: 10px;
-      border-radius: 8px;
-    }
-
-    input {
-      padding: 10px;
-      margin: 5px;
-      width: 80%;
-      max-width: 250px;
-    }
-
-    button {
-      padding: 10px 15px;
-      margin: 5px;
-      border: none;
-      border-radius: 8px;
-      background: black;
-      color: white;
-    }
+    body { font-family: Arial; text-align: center; margin:0; padding:10px; background:#f5f5f5; }
+    h1 { margin-bottom:10px; }
+    #reader { width:100%; max-width:350px; margin:auto; }
+    #cart { list-style:none; padding:0; }
+    li { background:white; margin:5px; padding:10px; border-radius:8px; }
+    input { padding:10px; margin:5px; width:80%; max-width:250px; }
+    button { padding:10px 15px; margin:5px; border:none; border-radius:8px; background:black; color:white; }
   </style>
 </head>
-
 <body>
 
-<h1>📱 My Store</h1>
-
+<h1>📱 Auto Store</h1>
 <div id="reader"></div>
-
 <h2 id="result">Scan a product</h2>
 
 <h3>🛒 Cart</h3>
 <ul id="cart"></ul>
 <h2 id="total">Total: $0.00</h2>
-
 <button onclick="clearCart()">Clear Cart</button>
 
-<hr>
-
-<h3>➕ Add Product</h3>
-<input id="code" placeholder="Code (ex: 1001)">
-<br>
-<input id="name" placeholder="Name">
-<br>
-<input id="price" placeholder="Price">
-<br>
-<button onclick="addProduct()">Add Product</button>
-
 <script>
-  let products = {
-    "1001": { name: "Chips", price: 2.00 },
-    "1002": { name: "Soda", price: 1.50 }
-  };
+let products = {
+  "1001": { name: "Chips", price: 2.00 },
+  "1002": { name: "Soda", price: 1.50 }
+};
 
-  let total = 0;
+let total = 0;
 
-  function onScanSuccess(code) {
-    let product = products[code];
+function addToCart(code, name, price) {
+  let li = document.createElement("li");
+  li.innerText = name + " - $" + price.toFixed(2);
+  document.getElementById("cart").appendChild(li);
 
-    if (product) {
-      let li = document.createElement("li");
-      li.innerText = product.name + " - $" + product.price.toFixed(2);
-      document.getElementById("cart").appendChild(li);
+  total += price;
+  document.getElementById("total").innerText = "Total: $" + total.toFixed(2);
+  document.getElementById("result").innerText = "✅ Added: " + name;
+}
 
-      total += product.price;
-      document.getElementById("total").innerText =
-        "Total: $" + total.toFixed(2);
+function onScanSuccess(code) {
+  let product = products[code];
 
-      document.getElementById("result").innerText =
-        "✅ Added: " + product.name;
-    } else {
-      document.getElementById("result").innerText =
-        "❌ Product not found";
-    }
-  }
+  if (product) {
+    addToCart(code, product.name, product.price);
+  } else {
+    // Product not found → prompt user to add it automatically
+    let name = prompt("New product! Enter name for code: " + code);
+    let price = parseFloat(prompt("Enter price for " + name));
 
-  function clearCart() {
-    document.getElementById("cart").innerHTML = "";
-    total = 0;
-    document.getElementById("total").innerText = "Total: $0.00";
-  }
-
-  function addProduct() {
-    let code = document.getElementById("code").value;
-    let name = document.getElementById("name").value;
-    let price = parseFloat(document.getElementById("price").value);
-
-    if (code && name && !isNaN(price)) {
+    if (name && !isNaN(price)) {
       products[code] = { name: name, price: price };
-      alert("✅ Product added!");
+      addToCart(code, name, price);
+      alert("✅ Product saved to system!");
     } else {
-      alert("Fill all fields correctly");
+      alert("❌ Invalid input, product not added.");
     }
   }
+}
 
-  let scanner = new Html5Qrcode("reader");
+function clearCart() {
+  document.getElementById("cart").innerHTML = "";
+  total = 0;
+  document.getElementById("total").innerText = "Total: $0.00";
+}
 
-  // 🔥 Force back camera on mobile
-  Html5Qrcode.getCameras().then(devices => {
-    let backCamera = devices.find(device =>
-      device.label.toLowerCase().includes("back") ||
-      device.label.toLowerCase().includes("rear")
-    );
+// Initialize scanner
+let scanner = new Html5Qrcode("reader");
+Html5Qrcode.getCameras().then(devices => {
+  let backCamera = devices.find(device =>
+    device.label.toLowerCase().includes("back") ||
+    device.label.toLowerCase().includes("rear")
+  );
 
-    let cameraId = backCamera ? backCamera.id : devices[0].id;
+  let cameraId = backCamera ? backCamera.id : devices[0].id;
 
-    scanner.start(
-      cameraId,
-      { fps: 10, qrbox: 250 },
-      onScanSuccess
-    );
-  }).catch(err => {
-    console.error(err);
-
-    // fallback (force back cam)
-    scanner.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: 250 },
-      onScanSuccess
-    );
-  });
+  scanner.start(
+    cameraId,
+    { fps: 10, qrbox: 250 },
+    onScanSuccess
+  );
+}).catch(err => {
+  // fallback
+  scanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    onScanSuccess
+  );
+});
 </script>
-
 </body>
 </html>
