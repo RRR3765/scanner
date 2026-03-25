@@ -2,11 +2,58 @@
 <html>
 <head>
   <title>My Store Scanner</title>
+
+  <!-- Mobile friendly -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <script src="https://unpkg.com/html5-qrcode"></script>
+
   <style>
-    body { font-family: Arial; text-align: center; }
-    #cart { margin-top: 20px; }
-    button { padding: 10px; margin: 5px; }
+    body {
+      font-family: Arial;
+      text-align: center;
+      margin: 0;
+      padding: 10px;
+      background: #f5f5f5;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    #reader {
+      width: 100%;
+      max-width: 350px;
+      margin: auto;
+    }
+
+    #cart {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      background: white;
+      margin: 5px;
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    input {
+      padding: 10px;
+      margin: 5px;
+      width: 80%;
+      max-width: 250px;
+    }
+
+    button {
+      padding: 10px 15px;
+      margin: 5px;
+      border: none;
+      border-radius: 8px;
+      background: black;
+      color: white;
+    }
   </style>
 </head>
 
@@ -14,7 +61,7 @@
 
 <h1>📱 My Store</h1>
 
-<div id="reader" style="width:300px; margin:auto;"></div>
+<div id="reader"></div>
 
 <h2 id="result">Scan a product</h2>
 
@@ -28,7 +75,9 @@
 
 <h3>➕ Add Product</h3>
 <input id="code" placeholder="Code (ex: 1001)">
+<br>
 <input id="name" placeholder="Name">
+<br>
 <input id="price" placeholder="Price">
 <br>
 <button onclick="addProduct()">Add Product</button>
@@ -54,7 +103,7 @@
         "Total: $" + total.toFixed(2);
 
       document.getElementById("result").innerText =
-        "Added: " + product.name;
+        "✅ Added: " + product.name;
     } else {
       document.getElementById("result").innerText =
         "❌ Product not found";
@@ -72,18 +121,36 @@
     let name = document.getElementById("name").value;
     let price = parseFloat(document.getElementById("price").value);
 
-    if (code && name && price) {
+    if (code && name && !isNaN(price)) {
       products[code] = { name: name, price: price };
       alert("✅ Product added!");
     } else {
-      alert("Fill all fields");
+      alert("Fill all fields correctly");
     }
   }
 
   let scanner = new Html5Qrcode("reader");
+
+  // 🔥 Force back camera on mobile
   Html5Qrcode.getCameras().then(devices => {
+    let backCamera = devices.find(device =>
+      device.label.toLowerCase().includes("back") ||
+      device.label.toLowerCase().includes("rear")
+    );
+
+    let cameraId = backCamera ? backCamera.id : devices[0].id;
+
     scanner.start(
-      devices[0].id,
+      cameraId,
+      { fps: 10, qrbox: 250 },
+      onScanSuccess
+    );
+  }).catch(err => {
+    console.error(err);
+
+    // fallback (force back cam)
+    scanner.start(
+      { facingMode: "environment" },
       { fps: 10, qrbox: 250 },
       onScanSuccess
     );
