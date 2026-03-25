@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Smart Store Scanner</title>
+  <title>Persistent Smart Store</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
@@ -16,7 +16,7 @@
 </head>
 <body>
 
-<h1>📱 Smart Store</h1>
+<h1>📱 Persistent Smart Store</h1>
 <div id="reader"></div>
 <h2 id="result">Scan a product</h2>
 
@@ -26,12 +26,24 @@
 <button onclick="clearCart()">Clear Cart</button>
 
 <script>
-let products = {
-  "1001": { name: "Chips", price: 2.00 },
-  "1002": { name: "Soda", price: 1.50 }
-};
+let cart = {};
+let products = {};
 
-let cart = {}; // store cart items by code
+// Load products from localStorage
+if (localStorage.getItem("products")) {
+  products = JSON.parse(localStorage.getItem("products"));
+} else {
+  // default products
+  products = {
+    "1001": { name: "Chips", price: 2.00 },
+    "1002": { name: "Soda", price: 1.50 }
+  };
+}
+
+// Save products to localStorage
+function saveProducts() {
+  localStorage.setItem("products", JSON.stringify(products));
+}
 
 function updateCartUI() {
   let cartUl = document.getElementById("cart");
@@ -43,7 +55,6 @@ function updateCartUI() {
     total += item.price * item.qty;
 
     let li = document.createElement("li");
-
     li.innerHTML = `
       <span>${item.name} - $${item.price.toFixed(2)}</span>
       <div>
@@ -53,7 +64,6 @@ function updateCartUI() {
         <button onclick="removeItem('${code}')">❌</button>
       </div>
     `;
-
     cartUl.appendChild(li);
   }
 
@@ -80,15 +90,22 @@ function clearCart() {
   updateCartUI();
 }
 
+let lastScan = 0; // cooldown to prevent freeze
+
 function onScanSuccess(code) {
+  let now = Date.now();
+  if (now - lastScan < 1000) return; // 1 second cooldown
+  lastScan = now;
+
   let product = products[code];
 
   if (!product) {
-    // Prompt for new product
+    // prompt user to add new product
     let name = prompt("New product! Enter name for code: " + code);
     let price = parseFloat(prompt("Enter price for " + name));
     if (name && !isNaN(price)) {
       products[code] = { name: name, price: price };
+      saveProducts(); // save permanently
       product = products[code];
       alert("✅ Product saved!");
     } else {
@@ -112,8 +129,7 @@ function onScanSuccess(code) {
 let scanner = new Html5Qrcode("reader");
 Html5Qrcode.getCameras().then(devices => {
   let backCamera = devices.find(d =>
-    d.label.toLowerCase().includes("back") ||
-    d.label.toLowerCase().includes("rear")
+    d.label.toLowerCase().includes("back") || d.label.toLowerCase().includes("rear")
   );
   let cameraId = backCamera ? backCamera.id : devices[0].id;
 
